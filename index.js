@@ -1,0 +1,52 @@
+const { authentication, includeBearerToken } = require('./authentication');
+const { afters = [] } = require('./middleware');
+const testConnection = require('./triggers/test_connection');
+const newTask = require('./triggers/task');
+const createTask = require('./creates/create_task');
+const updateTask = require('./creates/update_task');
+const createSubstask = require('./creates/create_subtask');
+const copyTask = require('./creates/copy_task');
+const commentOnTask = require('./creates/comment_on_task');
+const moveTaskToSection = require('./creates/move_task_to_section');
+const markAsApproved = require('./creates/mark_as_approved');
+const markAsDone = require('./creates/mark_as_done');
+const workspaceResource = require('./resources/workspaces');
+const projectResource = require('./resources/project');
+const taskResource = require('./resources/tasks');
+// const sectionResource = require('./resources/sections');
+const userResource = require('./resources/users');
+const tagResource = require('./resources/tags');
+
+module.exports = {
+  version: require('./package.json').version,
+  platformVersion: require('zapier-platform-core').version,
+
+  authentication,
+
+  beforeRequest: [includeBearerToken],
+  afterResponse: [...afters],
+
+  triggers: {
+    [testConnection.key]: testConnection,
+    [newTask.key]: newTask,
+  },
+  searches: {},
+  creates: {
+    [createTask.key]: createTask,
+    [updateTask.key]: updateTask,
+    [createSubstask.key]: createSubstask,
+    [commentOnTask.key]: commentOnTask,
+    [copyTask.key]: copyTask,
+    [moveTaskToSection.key]: moveTaskToSection,
+    [markAsApproved.key]: markAsApproved,
+    [markAsDone.key]: markAsDone,
+  },
+  resources: {
+    [workspaceResource.key]: workspaceResource,
+    [projectResource.key]: projectResource,
+    [taskResource.key]: taskResource,
+    // [sectionResource.key]: sectionResource,
+    [userResource.key]: userResource,
+    [tagResource.key]: tagResource,
+  },
+};
