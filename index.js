@@ -16,6 +16,13 @@ const taskResource = require('./resources/tasks');
 const sectionResource = require('./resources/sections');
 const userResource = require('./resources/users');
 const tagResource = require('./resources/tags');
+const taskAdded = require('./triggers/task_added');
+const taskUpdated = require('./triggers/task_updated');
+const taskCompleted = require('./triggers/task_completed');
+const fileAdded = require('./triggers/file_added');
+const commentOnTask = require('./triggers/comment_on_task');
+const taskMovedToSection = require('./triggers/task_moved_to_section');
+const tagAddedToTask = require('./triggers/tag_added_to_task');
 
 
 module.exports = {
@@ -28,8 +35,15 @@ module.exports = {
   afterResponse: [...afters],
 
   triggers: {
-    [testConnection.key]: testConnection,
-    [newTask.key]: newTask,
+    // [testConnection.key]: testConnection,
+    // [newTask.key]: newTask,
+    [taskAdded.key]: taskAdded,
+    [taskUpdated.key]: taskUpdated,
+    [taskCompleted.key]: taskCompleted,
+    [fileAdded.key]: fileAdded,
+    [commentOnTask.key]: commentOnTask,
+    [taskMovedToSection.key]: taskMovedToSection,
+    [tagAddedToTask.key]: tagAddedToTask,
   },
   searches: {},
   creates: {
