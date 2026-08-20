@@ -3,6 +3,8 @@ const { requestAction } = require('../utils/request_action');
 
 const perform = async (z, bundle) => {
   const data = await requestAction(z, 'update_task', {
+    workspace_id: bundle.inputData.workspace_id,
+    project_id: bundle.inputData.project_id,
     task_id: bundle.inputData.task_id,
     title: bundle.inputData.title,
     description: bundle.inputData.description,

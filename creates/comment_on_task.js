@@ -1,29 +1,73 @@
-// creates/comment_on_task.js
 'use strict';
+
 const { requestAction } = require('../utils/request_action');
 
 const perform = async (z, bundle) => {
-  // TODO: yeh actually updateTask nahi honi chahiye — naya task banega parent_id ke saath
   const data = await requestAction(z, 'comment_on_task', {
+    workspace_id: bundle.inputData.workspace_id,
+    project_id: bundle.inputData.project_id,
     task_id: bundle.inputData.task_id,
-    title: bundle.inputData.title,
+    comment: bundle.inputData.comment,
   });
 
-  return { id: `pending-${Date.now()}`, status: data.status, message: data.message };
+  return {
+    id: `comment-${Date.now()}`,
+    status: data.status,
+    message: data.message,
+    task_id: bundle.inputData.task_id,
+  };
 };
 
 module.exports = {
   key: 'comment_on_task',
-  noun: 'Task',
-  display: { label: 'Add comment on task', description: 'Creates a subtask under an existing task in ProofHub.' },
+  noun: 'Comment',
+
+  display: {
+    label: 'Add Comment on Task',
+    description: 'Adds a comment to an existing ProofHub task.',
+  },
+
   operation: {
     inputFields: [
-      { key: 'workspace_id', label: 'Workspace', type: 'string', required: true, dynamic: 'workspacesList.id.name', altersDynamicFields: true },
-      { key: 'project_id', label: 'Project', type: 'string', required: true, dynamic: 'ProjectsList.id.name', altersDynamicFields: true },
-      { key: 'task_id', label: 'Parent Task', type: 'string', required: true, dynamic: 'tasksList.id.name' },
-      { key: 'title', label: 'Subtask Title', type: 'string', required: true },
+      {
+        key: 'workspace_id',
+        label: 'Workspace',
+        type: 'string',
+        required: true,
+        dynamic: 'workspacesList.id.name',
+        altersDynamicFields: true,
+      },
+      {
+        key: 'project_id',
+        label: 'Project',
+        type: 'string',
+        required: true,
+        dynamic: 'ProjectsList.id.name',
+        altersDynamicFields: true,
+      },
+      {
+        key: 'task_id',
+        label: 'Task',
+        type: 'string',
+        required: true,
+        dynamic: 'tasksList.id.name',
+      },
+      {
+        key: 'comment',
+        label: 'Comment',
+        type: 'string',
+        required: true,
+        helpText: 'Enter the comment you want to add to the task.',
+      },
     ],
+
     perform,
-    sample: { id: 'pending-sample', status: 'accepted', message: 'Subtask creation queued.' },
+
+    sample: {
+      id: 'comment-sample',
+      status: 'success',
+      message: 'Comment added successfully.',
+      task_id: 520,
+    },
   },
 };

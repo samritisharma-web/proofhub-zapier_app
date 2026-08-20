@@ -13,9 +13,10 @@ const markAsDone = require('./creates/mark_as_done');
 const workspaceResource = require('./resources/workspaces');
 const projectResource = require('./resources/project');
 const taskResource = require('./resources/tasks');
-// const sectionResource = require('./resources/sections');
+const sectionResource = require('./resources/sections');
 const userResource = require('./resources/users');
 const tagResource = require('./resources/tags');
+
 
 module.exports = {
   version: require('./package.json').version,
@@ -45,7 +46,7 @@ module.exports = {
     [workspaceResource.key]: workspaceResource,
     [projectResource.key]: projectResource,
     [taskResource.key]: taskResource,
-    // [sectionResource.key]: sectionResource,
+    [sectionResource.key]: sectionResource,
     [userResource.key]: userResource,
     [tagResource.key]: tagResource,
   },

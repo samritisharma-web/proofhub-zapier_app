@@ -9,7 +9,7 @@ const listTags = async (z, bundle) => {
       workspace_id: bundle.inputData.workspace_id,
     },
   });
-  return response.data.data.map((t) => ({ id: t.id, name: t.name }));
+  return response.data.original.data.map((t) => ({ id: t.id, name: t.name }));
 };
 
 module.exports = {
