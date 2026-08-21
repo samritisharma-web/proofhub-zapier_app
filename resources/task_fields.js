@@ -1,7 +1,6 @@
 'use strict';
 
 const taskFieldsList = async (z, bundle) => {
-
     const response = await z.request({
         url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/search',
         method: 'GET',
@@ -18,7 +17,7 @@ const taskFieldsList = async (z, bundle) => {
 
     const fields = response.data.data || [];
 
-    z.console.log('Task fields:', fields);
+    z.console.log('Task Fields:', fields);
 
     return fields.map(field => ({
         id: field.key,
@@ -41,7 +40,7 @@ module.exports = {
 
             sample: {
                 id: 'name',
-                name: 'Task Name',
+                name: 'Task Title',
             },
         },
     },
