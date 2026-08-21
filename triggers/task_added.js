@@ -106,32 +106,8 @@ module.exports = {
     type: 'hook',
 
     inputFields: [
-
-      {
-        key: 'workspace_id',
-
-        label: 'Workspace',
-
-        type: 'string',
-
-        required: true,
-
-        dynamic: 'workspacesList.id.name',
-
-        altersDynamicFields: true,
-      },
-
-      {
-        key: 'project_id',
-
-        label: 'Project',
-
-        type: 'string',
-
-        required: true,
-
-        dynamic: 'ProjectsList.id.name',
-      },
+      { key: 'workspace_id', label: 'Workspace', type: 'string', required: true, dynamic: 'workspacesList.id.name', altersDynamicFields: true },
+      { key: 'project_id', label: 'Project', type: 'string', required: true, dynamic: 'ProjectsList.id.name' },
 
     ],
 

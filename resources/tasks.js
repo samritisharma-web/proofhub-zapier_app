@@ -9,6 +9,7 @@ const listTasks = async (z, bundle) => {
       type: 'tasks',
       workspace_id: bundle.inputData.workspace_id,
       project_id: bundle.inputData.project_id,
+      task_id: bundle.inputData.task_id,
     },
   });
 

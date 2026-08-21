@@ -7,6 +7,8 @@ const listProjects = async (z, bundle) => {
       workspace_id: bundle.inputData.workspace_id,   // pehle field se aayega
     },
   });
+  console.log('task fields',response);
+  
   return response.data;
 };
 module.exports = {
@@ -14,7 +16,7 @@ module.exports = {
   noun: 'project',
   list: {
     display: {
-      label: 'New Project',
+      label: 'New Project in resource',
       description: 'Lists projects for dropdown.',
     },
     operation: {

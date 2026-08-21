@@ -1,7 +1,7 @@
 const { authentication, includeBearerToken } = require('./authentication');
 const { afters = [] } = require('./middleware');
-const testConnection = require('./triggers/test_connection');
-const newTask = require('./triggers/task');
+// const testConnection = require('./triggers/test_connection');
+// const newTask = require('./triggers/task');
 const createTask = require('./creates/create_task');
 const updateTask = require('./creates/update_task');
 const createSubstask = require('./creates/create_subtask');
@@ -13,16 +13,17 @@ const markAsDone = require('./creates/mark_as_done');
 const workspaceResource = require('./resources/workspaces');
 const projectResource = require('./resources/project');
 const taskResource = require('./resources/tasks');
+const taskFieldsList = require('./resources/task_fields');
 const sectionResource = require('./resources/sections');
 const userResource = require('./resources/users');
 const tagResource = require('./resources/tags');
 const taskAdded = require('./triggers/task_added');
 const taskUpdated = require('./triggers/task_updated');
-const taskCompleted = require('./triggers/task_completed');
-const fileAdded = require('./triggers/file_added');
-const commentOnTask = require('./triggers/comment_on_task');
-const taskMovedToSection = require('./triggers/task_moved_to_section');
-const tagAddedToTask = require('./triggers/tag_added_to_task');
+// const taskCompleted = require('./triggers/task_completed');
+// const fileAdded = require('./triggers/file_added');
+// const commentAddedTrigger = require('./triggers/comment_on_task');
+// const taskMovedToSection = require('./triggers/task_moved_to_section');
+// const tagAddedToTask = require('./triggers/tag_added_to_task');
 
 
 module.exports = {
@@ -39,11 +40,11 @@ module.exports = {
     // [newTask.key]: newTask,
     [taskAdded.key]: taskAdded,
     [taskUpdated.key]: taskUpdated,
-    [taskCompleted.key]: taskCompleted,
-    [fileAdded.key]: fileAdded,
-    [commentOnTask.key]: commentOnTask,
-    [taskMovedToSection.key]: taskMovedToSection,
-    [tagAddedToTask.key]: tagAddedToTask,
+    // [taskCompleted.key]: taskCompleted,
+    // [fileAdded.key]: fileAdded,
+    // [commentAddedTrigger.key]: commentAddedTrigger,
+    // [taskMovedToSection.key]: taskMovedToSection,
+    // [tagAddedToTask.key]: tagAddedToTask,
   },
   searches: {},
   creates: {
@@ -63,5 +64,6 @@ module.exports = {
     [sectionResource.key]: sectionResource,
     [userResource.key]: userResource,
     [tagResource.key]: tagResource,
+    [taskFieldsList.key]: taskFieldsList,
   },
 };

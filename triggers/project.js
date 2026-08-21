@@ -9,6 +9,6 @@ const perform = async (z, bundle) => {
 module.exports = {
   key: 'project',
   noun: 'Project',
-  display: { label: 'New Project', description: 'Triggers when a new project is found.', hidden: true },
+  display: { label: 'New Project in trigger', description: 'Triggers when a new project is found.', hidden: true },
   operation: { perform, sample: { id: 1, name: 'Sample Project' } },
 };
