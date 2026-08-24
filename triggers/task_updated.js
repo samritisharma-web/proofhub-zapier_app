@@ -13,6 +13,8 @@ const performSubscribe = async (z, bundle) => {
             event: 'task_updated',
             workspace_id: bundle.inputData.workspace_id,
             project_id: bundle.inputData.project_id,
+            task_id: bundle.inputData.task_id,
+            task_fields: bundle.inputData.taskFields,
             target_url: bundle.targetUrl,
         },
     });
