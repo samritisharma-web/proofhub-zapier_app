@@ -6,7 +6,7 @@ const perform = async (z, bundle) => {
   const data = await requestAction(z, 'copy_task', {
     task_id: bundle.inputData.task_id,
     title: bundle.inputData.title,
-    workspace_id: bundle.inputData.workspace_id,
+    wsid: bundle.inputData.wsid,
     project_id: bundle.inputData.project_id,
     include_description: bundle.inputData.include_description,
     include_assignee: bundle.inputData.include_assignee,
@@ -38,7 +38,7 @@ module.exports = {
   operation: {
     inputFields: [
       {
-        key: 'workspace_id',
+        key: 'wsid',
         label: 'Workspace',
         type: 'string',
         required: true,

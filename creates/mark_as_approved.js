@@ -4,7 +4,7 @@ const { requestAction } = require('../utils/request_action');
 const perform = async (z, bundle) => {
   const data = await requestAction(z, 'mark_as_approved', {
     task_id: bundle.inputData.task_id,
-    workspace_id: bundle.inputData.workspace_id,
+    wsid: bundle.inputData.wsid,
     project_id: bundle.inputData.project_id,
     approval_status: bundle.inputData.approval_status,
   });
@@ -26,7 +26,7 @@ module.exports = {
   },
   operation: {
     inputFields: [
-      { key: 'workspace_id', label: 'Workspace', type: 'string', required: true, dynamic: 'workspacesList.id.name', altersDynamicFields: true },
+      { key: 'wsid', label: 'Workspace', type: 'string', required: true, dynamic: 'workspacesList.id.name', altersDynamicFields: true },
       { key: 'project_id', label: 'Project', type: 'string', required: true, dynamic: 'ProjectsList.id.name', altersDynamicFields: true },
       { key: 'task_id', label: 'Task', type: 'string', required: true, dynamic: 'tasksList.id.name' },
       {

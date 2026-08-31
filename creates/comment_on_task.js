@@ -4,7 +4,7 @@ const { requestAction } = require('../utils/request_action');
 
 const perform = async (z, bundle) => {
   const data = await requestAction(z, 'comment_on_task', {
-    workspace_id: bundle.inputData.workspace_id,
+    wsid: bundle.inputData.wsid,
     project_id: bundle.inputData.project_id,
     task_id: bundle.inputData.task_id,
     comment: bundle.inputData.comment,
@@ -30,7 +30,7 @@ module.exports = {
   operation: {
     inputFields: [
       {
-        key: 'workspace_id',
+        key: 'wsid',
         label: 'Workspace',
         type: 'string',
         required: true,

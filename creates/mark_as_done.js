@@ -5,7 +5,7 @@ const perform = async (z, bundle) => {
   const data = await requestAction(z, 'mark_as_done', {
     task_id: bundle.inputData.task_id,
     project_id: bundle.inputData.project_id,
-    workspace_id: bundle.inputData.workspace_id,
+    wsid: bundle.inputData.wsid,
   });
 
   return {
@@ -22,7 +22,7 @@ module.exports = {
   display: { label: 'Mark Task as Done', description: 'Marks an existing task as completed in ProofHub.' },
   operation: {
     inputFields: [
-      { key: 'workspace_id', label: 'Workspace', type: 'string', required: true, dynamic: 'workspacesList.id.name', altersDynamicFields: true },
+      { key: 'wsid', label: 'Workspace', type: 'string', required: true, dynamic: 'workspacesList.id.name', altersDynamicFields: true },
       { key: 'project_id', label: 'Project', type: 'string', required: true, dynamic: 'ProjectsList.id.name', altersDynamicFields: true },
       { key: 'task_id', label: 'Task', type: 'string', required: true, dynamic: 'tasksList.id.name' },
     ],

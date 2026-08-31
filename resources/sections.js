@@ -11,8 +11,9 @@ const listSections = async (z, bundle) => {
     method: 'GET',
     params: {
       type: 'sections',
-      workspace_id: bundle.inputData.workspace_id,
+      wsid: bundle.inputData.wsid,
       project_id: bundle.inputData.project_id,
+      task_id: bundle.inputData.task_id,
     },
   });
 

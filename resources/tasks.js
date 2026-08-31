@@ -1,36 +1,41 @@
 'use strict';
 
 const listTasks = async (z, bundle) => {
-  z.console.log('DEBUG bundle.inputData:', JSON.stringify(bundle.inputData));
   const response = await z.request({
     url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/search',
     method: 'GET',
     params: {
       type: 'tasks',
-      workspace_id: bundle.inputData.workspace_id,
+      wsid: bundle.inputData.wsid,
       project_id: bundle.inputData.project_id,
       task_id: bundle.inputData.task_id,
     },
   });
 
-  return response.data.data.map((t) => ({
-    id: t.task_id,
-    name: t.name,
+  return response.data.original.map((task) => ({
+    id: String(task.id),
+    name: task.name,
   }));
 };
 
 module.exports = {
   key: 'tasks',
   noun: 'Task',
+
   list: {
     display: {
-      label: 'New Task',
-      description: 'Lists tasks for dropdown.',
+      label: 'Find Task',
+      description: 'Search for tasks.',
       hidden: true,
     },
+
     operation: {
       perform: listTasks,
-      sample: { id: 520, name: 'Sample Task' },
+
+      sample: {
+        id: '725',
+        name: 'new task to test zap trigger15',
+      },
     },
   },
 };

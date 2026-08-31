@@ -41,7 +41,7 @@ describe('OAuth2 Authentication', () => {
       );
 
       expect(authorizeUrl).toBe(
-        `https://app.indev2.proofhub.com/oauth/ss_zapier/public/oauth/connect-to-zapier?redirect_uri=${encodeURIComponent(
+        `https://app.indev2.proofhub.com/oauth/ss_zapier/public/oauth/zapier/connect-to-zapier?redirect_uri=${encodeURIComponent(
           REDIRECT_URI
         )}&state=4444`
       );

@@ -121,22 +121,27 @@ echo
 echo "======================================"
 echo "DONE"
 echo "======================================"
+echo "===== WORKSPACES SEARCH RESPONSE ====="
 
 curl -s "https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/search?type=workspaces" \
-  -H "Authorization: Bearer $ACCESS_TOKEN"
-curl -s "https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/search?type=projects&workspace_id=4598" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  | tee workspaces_response.json
+
+echo
+echo "===== END RESPONSE ====="
+curl -s "https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/search?type=projects&wsid=4598" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 
 # curl -s -X POST "https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/action" \
 #   -H "Authorization: Bearer $ACCESS_TOKEN" \
 #   -H "Content-Type: application/x-www-form-urlencoded" \
 #   -d "action=create_task" \
-#   -d "workspace_id=4598" \
+#   -d "wsid=4598" \
 #   -d "project_id=PASTE_PROJECT_ID_HERE" \
 #   -d "title=Test Task from Zapier" \
 #   -d "description=This is a test description"
 
 ACCESS_TOKEN=$(grep -o '"access_token":"[^"]*"' token_response.json | cut -d'"' -f4)
 
-curl -s "https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/search?type=subtask&workspace_id=4598&project_id=36290" \
+curl -s "https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/search?type=subtask&wsid=4598&project_id=36290" \
   -H "Authorization: Bearer $ACCESS_TOKEN"

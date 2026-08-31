@@ -1,157 +1,180 @@
 'use strict';
 
 const performSubscribe = async (z, bundle) => {
-    z.console.log('===== SUBSCRIBE CALLED =====');
-    z.console.log('INPUT DATA:', bundle.inputData);
-    z.console.log('TARGET URL:', bundle.targetUrl);
+  z.console.log('===== SUBSCRIBE CALLED (updated_task) =====');
+  z.console.log('INPUT DATA:', bundle.inputData);
+  z.console.log('TARGET URL:', bundle.targetUrl);
 
-    const response = await z.request({
-        url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe',
-        method: 'POST',
+  const response = await z.request({
+    url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe',
+    method: 'POST',
+    body: {
+      event: 'updated_task',
+      wsid: bundle.inputData.wsid,
+      project_id: bundle.inputData.project_id,
+      task_id: bundle.inputData.task_id,
+      task_fields: bundle.inputData.taskFields,
+      url: bundle.targetUrl,
+    },
+  });
 
-        body: {
-            event: 'task_updated',
-            workspace_id: bundle.inputData.workspace_id,
-            project_id: bundle.inputData.project_id,
-            task_id: bundle.inputData.task_id,
-            task_fields: bundle.inputData.taskFields,
-            target_url: bundle.targetUrl,
-        },
-    });
-
-    z.console.log('SUBSCRIBE RESPONSE:', response.data);
-
-    response.throwForStatus();
-
-    return response.data;
+  z.console.log('SUBSCRIBE RESPONSE:', response.data);
+  response.throwForStatus();
+  return response.data;
 };
 
 const performUnsubscribe = async (z, bundle) => {
-    const subscriptionId = bundle.subscribeData.id;
+  const subscriptionId = bundle.subscribeData.id;
 
-    const response = await z.request({
-        url: `https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe/${subscriptionId}`,
-        method: 'DELETE',
-    });
+  const response = await z.request({
+    url: `https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe/${subscriptionId}`,
+    method: 'DELETE',
+  });
 
-    response.throwForStatus();
+  response.throwForStatus();
+  return response.data;
+};
 
-    return response.data;
+const shapeTask = (task = {}) => {
+  const item = task.item_json || task;
+  const rawId = task.item_id != null ? task.item_id : task.id;
+
+  return {
+    id: rawId != null ? String(rawId) : undefined,
+    name: item.name || (rawId != null ? `Task #${rawId}` : undefined),
+    description: item.description,
+    wsid: task.wsid != null ? String(task.wsid) : undefined,
+    project_id: task.project_id != null ? String(task.project_id) : undefined,
+    updated_at: task.last_activity_at || task.updated_at || undefined,
+  };
 };
 
 const perform = async (z, bundle) => {
-    const task = bundle.cleanedRequest;
+  const task = bundle.cleanedRequest || {};
 
-    z.console.log('===== TASK UPDATED =====');
-    z.console.log('Task:', task);
+  z.console.log('===== TASK UPDATED =====');
+  z.console.log('Raw task payload:', task);
 
-    return {
-        id: String(task.id),
-        name: task.name,
-        description: task.description,
+  const shaped = shapeTask(task);
 
-        workspace_id: String(task.workspace_id),
-        project_id: String(task.project_id),
+  z.console.log('Shaped output:', shaped);
 
-        status: task.status
-            ? String(task.status)
-            : undefined,
-
-        updated_at: task.updated_at || undefined,
-    };
+  return [shaped];
 };
 
 const performList = async (z, bundle) => {
-    const response = await z.request({
-        url:
-            'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/sample',
+  const response = await z.request({
+    url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers',
+    method: 'GET',
+    params: {
+      event: 'updated_task',
+      wsid: bundle.inputData.wsid,
+      project_id: bundle.inputData.project_id,
+      task_id: bundle.inputData.task_id,
+      task_fields: bundle.inputData.taskFields,
+    },
+    skipThrowForStatus: true,
+  });
 
-        method: 'GET',
+  z.console.log('STATUS:', response.status);
+  z.console.log('RESPONSE DATA:', response.data);
 
-        params: {
-            event: 'task_updated',
-            workspace_id: bundle.inputData.workspace_id,
-            project_id: bundle.inputData.project_id,
-        },
-    });
+  if (response.status === 422) {
+    const message =
+      response.data?.errors?.event?.[0] ||
+      response.data?.message ||
+      'Validation failed.';
 
-    response.throwForStatus();
+    throw new z.errors.Error(
+      message,
+      'InvalidRequest'
+    );
+  }
 
-    const data = response.data;
+  if (response.status < 200 || response.status >= 300) {
+    throw new z.errors.Error(
+      response.data?.message || 'Unable to pull tasks.',
+      'InvalidRequest'
+    );
+  }
 
-    return Array.isArray(data)
-        ? data
-        : data.data || [];
-};
+  const data = response.data;
+
+  const list = Array.isArray(data)
+    ? data
+    : data.data || data.original || [];
+
+  return list.map(shapeTask);
+}; 
 
 module.exports = {
-    key: 'task_updated',
+  key: 'updated_task',
+  noun: 'Task',
 
-    noun: 'Task',
+  display: {
+    label: 'Task Updated',
+    description: 'Triggers instantly when a task is updated in ProofHub.',
+  },
 
-    display: {
-        label: 'Task Updated',
-        description:
-            'Triggers instantly when a task is updated in ProofHub.',
+  operation: {
+    type: 'hook',
+
+    inputFields: [
+      {
+        key: 'wsid',
+        label: 'Workspace',
+        type: 'string',
+        required: true,
+        dynamic: 'workspacesList.id.name',
+        altersDynamicFields: true,
+      },
+      {
+        key: 'project_id',
+        label: 'Project',
+        type: 'string',
+        required: true,
+        dynamic: 'ProjectsList.id.name',
+        altersDynamicFields: true,
+      },
+      {
+        key: 'task_id',
+        label: 'Task',
+        type: 'string',
+        required: true,
+        dynamic: 'tasksList.id.name',
+        altersDynamicFields: true,
+      },
+      {
+        key: 'taskFields',
+        label: 'Task Fields',
+        type: 'string',
+        list: true,
+        required: true,
+        dynamic: 'taskFields.id.name',
+      },
+    ],
+
+    performSubscribe,
+    performUnsubscribe,
+    perform,
+    performList,
+
+    sample: {
+      id: '111988',
+      name: 'Task #111988',
+      description: 'Sample description',
+      wsid: '4598',
+      project_id: '36290',
+      updated_at: '2026-08-26T09:34:57.640589Z',
     },
 
-    operation: {
-        type: 'hook',
-
-        inputFields: [
-            {
-                key: 'workspace_id',
-                label: 'Workspace',
-                type: 'string',
-                required: true,
-                dynamic: 'workspacesList.id.name',
-                altersDynamicFields: true,
-            },
-
-            {
-                key: 'project_id',
-                label: 'Project',
-                type: 'string',
-                required: true,
-                dynamic: 'ProjectsList.id.name',
-                altersDynamicFields: true,
-            },
-
-            {
-                key: 'task_id',
-                label: 'Task',
-                type: 'string',
-                required: true,
-                dynamic: 'tasksList.id.name',
-                altersDynamicFields: true,
-            },
-
-            {
-                key: 'taskFields',
-                label: 'Task Fields',
-                type: 'string',
-                list: true,
-                required: true,
-                dynamic: 'taskFields.id.name',
-            },
-        ],
-
-        performSubscribe,
-
-        performUnsubscribe,
-
-        perform,
-
-        performList,
-
-        sample: {
-            id: '101416',
-            name: 'Sample Task',
-            description: 'Sample description',
-            workspace_id: '4598',
-            project_id: '36290',
-            status: 'open',
-            updated_at: '2026-08-21T10:00:00Z',
-        },
-    },
+    outputFields: [
+      { key: 'id', label: 'Task ID', type: 'string' },
+      { key: 'name', label: 'Task Name', type: 'string' },
+      { key: 'description', label: 'Description', type: 'string' },
+      { key: 'wsid', label: 'Workspace ID', type: 'string' },
+      { key: 'project_id', label: 'Project ID', type: 'string' },
+      { key: 'updated_at', label: 'Updated At', type: 'datetime' },
+    ],
+  },
 };

@@ -6,17 +6,36 @@ const listTags = async (z, bundle) => {
     method: 'GET',
     params: {
       type: 'tags',
-      workspace_id: bundle.inputData.workspace_id,
+      wsid: bundle.inputData.wsid,
+      project_id: bundle.inputData.project_id,
+      task_id: bundle.inputData.task_id,
     },
   });
-  return response.data.original.data.map((t) => ({ id: t.id, name: t.name }));
+
+  return response.data.original.data.map((tag) => ({
+    id: String(tag.id),
+    name: tag.name,
+  }));
 };
 
 module.exports = {
   key: 'tags',
   noun: 'Tag',
+
   list: {
-    display: { label: 'New Tag', description: 'Lists tags for dropdown.', hidden: true },
-    operation: { perform: listTags, sample: { id: 1, name: 'Sample Tag' } },
+    display: {
+      label: 'New Tag',
+      description: 'Lists tags for dropdown.',
+      hidden: true,
+    },
+
+    operation: {
+      perform: listTags,
+
+      sample: {
+        id: '1',
+        name: 'Sample Tag',
+      },
+    },
   },
 };

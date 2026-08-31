@@ -2,8 +2,8 @@
 const { requestAction } = require('../utils/request_action');
 
 const perform = async (z, bundle) => {
-  const data = await requestAction(z, 'update_task', {
-    workspace_id: bundle.inputData.workspace_id,
+  const data = await requestAction(z, 'task_updated', {
+    wsid: bundle.inputData.wsid,
     project_id: bundle.inputData.project_id,
     task_id: bundle.inputData.task_id,
     title: bundle.inputData.title,
@@ -26,7 +26,7 @@ const perform = async (z, bundle) => {
 };
 
 module.exports = {
-  key: 'update_task',
+  key: 'task_updated',
   noun: 'Task',
   display: {
     label: 'Update Task',
@@ -34,7 +34,7 @@ module.exports = {
   },
   operation: {
     inputFields: [
-      { key: 'workspace_id', label: 'Workspace', type: 'string', required: true, dynamic: 'workspacesList.id.name', altersDynamicFields: true },
+      { key: 'wsid', label: 'Workspace', type: 'string', required: true, dynamic: 'workspacesList.id.name', altersDynamicFields: true },
       { key: 'project_id', label: 'Project', type: 'string', required: true, dynamic: 'ProjectsList.id.name', altersDynamicFields: true },
       // { key: 'section_id', label: 'Section', type: 'string', required: false, dynamic: 'sectionsList.id.name' },
       { key: 'task_id', label: 'Task', type: 'string', required: true, dynamic: 'tasksList.id.name' },

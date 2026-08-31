@@ -7,7 +7,7 @@ const taskFieldsList = async (z, bundle) => {
 
         params: {
             type: 'task_fields',
-            workspace_id: bundle.inputData.workspace_id,
+            wsid: bundle.inputData.wsid,
             project_id: bundle.inputData.project_id,
             task_id: bundle.inputData.task_id,
         },
@@ -31,7 +31,7 @@ module.exports = {
 
     list: {
         display: {
-            label: 'Task Fields',
+            label: 'Task Fields in resource',
             description: 'Returns the fields available for a task.',
         },
 

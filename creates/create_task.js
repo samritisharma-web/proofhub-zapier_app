@@ -9,7 +9,7 @@ const perform = async (z, bundle) => {
       method: 'POST',
       body: {
         action: 'create_task',
-        workspace_id: bundle.inputData.workspace_id,
+        wsid: bundle.inputData.wsid,
         project_id: bundle.inputData.project_id,
         title: bundle.inputData.title,
         description: bundle.inputData.description,
@@ -57,7 +57,7 @@ module.exports = {
   },
   operation: {
     inputFields: [
-      { key: 'workspace_id', label: 'Workspace', type: 'string', required: true, dynamic: 'workspacesList.id.name', altersDynamicFields: true },
+      { key: 'wsid', label: 'Workspace', type: 'string', required: true, dynamic: 'workspacesList.id.name', altersDynamicFields: true },
       { key: 'project_id', label: 'Project', type: 'string', required: true, dynamic: 'ProjectsList.id.name' },
       { key: 'title', label: 'Task Title', type: 'string', required: true },
       { key: 'description', label: 'Description', type: 'text', required: false },

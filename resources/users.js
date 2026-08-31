@@ -6,7 +6,7 @@ const listUsers = async (z, bundle) => {
     method: 'GET',
     params: {
       type: 'users',
-      workspace_id: bundle.inputData.workspace_id,
+      wsid: bundle.inputData.wsid,
     },
   });
   return response.data.data.map((u) => ({ id: u.id, name: u.name || u.email }));

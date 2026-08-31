@@ -121,8 +121,7 @@ const authentication = {
 
   test,
 
-  connectionLabel:
-    '{{json.workspace_name}} - {{json.user_email || json.user_name}}',
+  connectionLabel: 'ProofHub - {{bundle.inputData.user_email}}',
 };
 
 module.exports = {

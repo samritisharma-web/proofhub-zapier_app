@@ -4,12 +4,19 @@ const listProjects = async (z, bundle) => {
     method: 'GET',
     params: {
       type: 'projects',
-      workspace_id: bundle.inputData.workspace_id,   // pehle field se aayega
+      wsid: bundle.inputData.wsid,
     },
   });
-  console.log('task fields',response);
-  
-  return response.data;
+
+  const projects =
+    response.data.original ||
+    response.data.data ||
+    response.data;
+
+  return projects.map((pr) => ({
+    id: String(pr.id),
+    name: pr.name,
+  }));
 };
 module.exports = {
   key: 'Projects',

@@ -1,167 +1,224 @@
 'use strict';
 
-const perform = async (z, bundle) => {
-  let response;
+const performSubscribe = async (z, bundle) => {
+    z.console.log('===== TAG ADDED TO TASK SUBSCRIBE CALLED =====');
+    z.console.log('INPUT DATA:', bundle.inputData);
+    z.console.log('TARGET URL:', bundle.targetUrl);
 
-  try {
-    response = await z.request({
-      url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/trigger',
-      method: 'POST',
+    const response = await z.request({
+        url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe',
+        method: 'POST',
 
-      body: {
-        event: 'tag_added_to_task',
-
-        workspace_id: bundle.inputData.workspace_id,
-        project_id: bundle.inputData.project_id,
-        task_id: bundle.inputData.task_id,
-      },
+        body: {
+            event: 'tag_added_to_task',
+            wsid: bundle.inputData.wsid,
+            project_id: bundle.inputData.project_id,
+            task_id: bundle.inputData.task_id,
+            url: bundle.targetUrl,
+        },
     });
-  } catch (err) {
-    throw new z.errors.Error(
-      `Request to ProofHub failed: ${err.message}`,
-      'RequestError',
-      err.status || 500
+
+    z.console.log(
+        'TAG ADDED TO TASK SUBSCRIBE RESPONSE:',
+        response.data
     );
-  }
 
-  if (!response || !response.status) {
-    throw new z.errors.Error(
-      'No response received from ProofHub.',
-      'NoResponseError',
-      500
+    response.throwForStatus();
+
+    return response.data;
+};
+
+const performUnsubscribe = async (z, bundle) => {
+    const subscriptionId = bundle.subscribeData.id;
+
+    z.console.log(
+        '===== TAG ADDED TO TASK UNSUBSCRIBE =====',
+        subscriptionId
     );
-  }
 
-  if (response.status >= 400) {
-    throw new z.errors.Error(
-      response.data?.error || 'Failed to get task event from ProofHub.',
-      'TaskcompletedError',
-      response.status
-    );
-  }
+    const response = await z.request({
+        url: `https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe/${subscriptionId}`,
+        method: 'DELETE',
+    });
 
-  /*
-   * Zapier polling triggers expect an array of records.
-   *
-   * Example:
-   * [
-   *   {
-   *     id: 101416,
-   *     name: "My New Task",
-   *     workspace_id: 4598,
-   *     project_id: 36290
-   *   }
-   * ]
-   */
+    response.throwForStatus();
 
-  const data = response.data;
+    return response.data;
+};
 
-  if (Array.isArray(data)) {
-    return data.map(item => ({
-      ...item,
-      id: String(item.id),
-    }));
-  }
+const perform = async (z, bundle) => {
+    const task = bundle.cleanedRequest;
 
-  if (Array.isArray(data.data)) {
-    return data.data.map(item => ({
-      ...item,
-      id: String(item.id),
-    }));
-  }
+    z.console.log('===== TAG ADDED TO TASK =====');
+    z.console.log('Task:', task);
 
-  if (data.data) {
-    return [{
-      ...data.data,
-      id: String(data.data.id),
-    }];
-  }
+    return {
+        id: String(task.id || task.task_id),
 
-  return [];
+        name: task.name,
+
+        description: task.description,
+
+        wsid: task.wsid
+            ? String(task.wsid)
+            : undefined,
+
+        project_id: task.project_id
+            ? String(task.project_id)
+            : undefined,
+
+        task_id: task.task_id
+            ? String(task.task_id)
+            : task.id
+                ? String(task.id)
+                : undefined,
+
+        tag_id: task.tag_id
+            ? String(task.tag_id)
+            : undefined,
+
+        tag_name: task.tag_name || undefined,
+
+        updated_at: task.updated_at || undefined,
+    };
+};
+
+const performList = async (z, bundle) => {
+    const response = await z.request({
+        url:
+            'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers',
+
+        method: 'GET',
+
+        params: {
+            event: 'tag_added_to_task',
+            wsid: bundle.inputData.wsid,
+            project_id: bundle.inputData.project_id,
+            task_id: bundle.inputData.task_id,
+            tags: bundle.inputData.tags,
+        },
+    });
+
+    response.throwForStatus();
+
+    const data = response.data;
+
+    return Array.isArray(data)
+        ? data
+        : data.data || [];
 };
 
 module.exports = {
-  key: 'tag_added_to_task',
+    key: 'tag_added_to_task',
 
-  noun: 'Task',
+    noun: 'Task',
 
-  display: {
-    label: 'Task completed',
-    description: 'Triggers when a new task is completed in ProofHub.',
-  },
-
-  operation: {
-    type: 'polling',
-
-    inputFields: [
-      {
-        key: 'workspace_id',
-        label: 'Workspace',
-        type: 'string',
-        required: true,
-
-        dynamic: 'workspacesList.id.name',
-
-        altersDynamicFields: true,
-      },
-
-      {
-        key: 'project_id',
-        label: 'Project',
-        type: 'string',
-        required: true,
-
-        dynamic: 'ProjectsList.id.name',
-
-        altersDynamicFields: true,
-      },
-
-      {
-        key: 'task_id',
-        label: 'Task',
-        type: 'string',
-        required: false,
-
-        dynamic: 'TasksList.id.name',
-      },
-    ],
-
-    perform,
-
-    sample: {
-      id: '101416',
-      name: 'Sample Task',
-      workspace_id: '4598',
-      project_id: '36290',
-      task_id: '101416',
+    display: {
+        label: 'Tag Added to Task',
+        description:
+            'Triggers instantly when a tag is added to a task in ProofHub.',
     },
 
-    outputFields: [
-      {
-        key: 'id',
-        label: 'Task ID',
-        type: 'string',
-      },
-      {
-        key: 'name',
-        label: 'Task Name',
-        type: 'string',
-      },
-      {
-        key: 'workspace_id',
-        label: 'Workspace ID',
-        type: 'string',
-      },
-      {
-        key: 'project_id',
-        label: 'Project ID',
-        type: 'string',
-      },
-      {
-        key: 'task_id',
-        label: 'Task ID',
-        type: 'string',
-      },
-    ],
-  },
+    operation: {
+        type: 'hook',
+
+        inputFields: [
+            {
+                key: 'wsid',
+                label: 'Workspace',
+                type: 'string',
+                required: true,
+                dynamic: 'workspacesList.id.name',
+                altersDynamicFields: true,
+            },
+
+            {
+                key: 'project_id',
+                label: 'Project',
+                type: 'string',
+                required: true,
+                dynamic: 'ProjectsList.id.name',
+                altersDynamicFields: true,
+            },
+
+            {
+                key: 'task_id',
+                label: 'Task',
+                type: 'string',
+                required: true,
+                dynamic: 'tasksList.id.name',
+            },
+
+            {
+                key: 'tag_id',
+                label: 'Tag',
+                type: 'string',
+                required: false,
+                dynamic: 'tagsList.id.name',
+            },
+        ],
+
+        performSubscribe,
+
+        performUnsubscribe,
+
+        perform,
+
+        performList,
+
+        sample: {
+            id: '101416',
+            name: 'Sample Task',
+            description: 'Sample description',
+            wsid: '4598',
+            project_id: '36290',
+            task_id: '101416',
+            tag_id: '501',
+            tag_name: 'Important',
+            updated_at: '2026-08-21T10:00:00Z',
+        },
+
+        outputFields: [
+            {
+                key: 'id',
+                label: 'Task ID',
+                type: 'string',
+            },
+            {
+                key: 'name',
+                label: 'Task Name',
+                type: 'string',
+            },
+            {
+                key: 'wsid',
+                label: 'Workspace ID',
+                type: 'string',
+            },
+            {
+                key: 'project_id',
+                label: 'Project ID',
+                type: 'string',
+            },
+            {
+                key: 'task_id',
+                label: 'Task ID',
+                type: 'string',
+            },
+            {
+                key: 'tag_id',
+                label: 'Tag ID',
+                type: 'string',
+            },
+            {
+                key: 'tag_name',
+                label: 'Tag Name',
+                type: 'string',
+            },
+            {
+                key: 'updated_at',
+                label: 'Updated At',
+                type: 'string',
+            },
+        ],
+    },
 };
