@@ -36,8 +36,6 @@ module.exports = {
   afterResponse: [...afters],
 
   triggers: {
-    // [testConnection.key]: testConnection,
-    // [newTask.key]: newTask,
     [taskAdded.key]: taskAdded,
     [taskUpdated.key]: taskUpdated,
     [taskCompleted.key]: taskCompleted,

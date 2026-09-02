@@ -9,7 +9,7 @@ const performSubscribe = async (z, bundle) => {
     url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe',
     method: 'POST',
     body: {
-      event: 'file_added',
+      event: 'file_added_on_task',
       wsid: bundle.inputData.wsid,
       project_id: bundle.inputData.project_id,
       task_id: bundle.inputData.task_id,
@@ -36,56 +36,136 @@ const performUnsubscribe = async (z, bundle) => {
   return response.data;
 };
 
-// Pulls a fallback numeric id out of the attachment_web_url,
-// since ProofHub sends attachment.id as null.
-// e.g. ".../attachments/1688180597/v/672770336" -> "1688180597"
-const extractAttachmentId = (webUrl) => {
-  if (!webUrl) return undefined;
-  const match = webUrl.match(/attachments\/(\d+)/);
+const extractAttachmentId = (url) => {
+  if (!url) {
+    return undefined;
+  }
+
+  const match = String(url).match(/\/(\d+)(?:\/)?$/);
+
   return match ? match[1] : undefined;
 };
 
-// Shapes ONE attachment object into the output row.
-// raw = the full webhook payload (for wsid, project_id, task_id, timestamp)
-// attachment = a single entry from item_json.attachments
-const shapeFile = (raw = {}, attachment = {}) => {
-  const fallbackId = attachment.id != null
-    ? attachment.id
-    : extractAttachmentId(attachment.attachment_web_url);
+const getItemJson = (raw = {}) => {
+  return raw.item_json && typeof raw.item_json === 'object'
+    ? raw.item_json
+    : {};
+};
 
-  // item_id at the top level is the task's id when item_type === "task"
-  const taskId = raw.item_id != null ? raw.item_id : raw.task_id;
+const shapeFile = (raw = {}, attachment = {}) => {
+  const item = getItemJson(raw);
+
+  /*
+   * File ID priority:
+   * 1. attachment.id
+   * 2. attachment.file_id
+   * 3. raw.file_id
+   * 4. raw.attachment_id
+   * 5. URL se extract
+   * 6. raw.id
+   * 7. raw.item_id
+   *
+   * Last fallback is only to make sure Zapier gets
+   * a stable ID even if the payload is incomplete.
+   */
+  const fallbackId =
+    attachment.id ??
+    attachment.file_id ??
+    raw.file_id ??
+    raw.attachment_id ??
+    extractAttachmentId(
+      attachment.attachment_web_url ||
+      attachment.attachment_url ||
+      raw.attachment_web_url ||
+      raw.attachment_url
+    ) ??
+    raw.id ??
+    raw.item_id;
+
+  const taskId =
+    raw.task_id ??
+    item.task_id ??
+    (raw.item_type === 'task' ? raw.item_id : undefined);
 
   return {
     id: fallbackId != null ? String(fallbackId) : undefined,
-    file_id: fallbackId != null ? String(fallbackId) : undefined,
-    name: attachment.name || undefined,
 
-    wsid: raw.wsid != null ? String(raw.wsid) : undefined,
-    project_id: raw.project_id != null ? String(raw.project_id) : undefined,
-    task_id: taskId != null ? String(taskId) : undefined,
+    file_id: fallbackId != null
+      ? String(fallbackId)
+      : undefined,
 
-    // attachment_url was empty in the sample — attachment_web_url is the real usable link
-    url: attachment.attachment_web_url || attachment.attachment_url || undefined,
+    name:
+      attachment.name ??
+      attachment.file_name ??
+      item.name ??
+      raw.name ??
+      undefined,
 
-    created_at: raw.last_activity_at || raw.created_at || undefined,
+    wsid:
+      raw.wsid != null
+        ? String(raw.wsid)
+        : undefined,
+
+    project_id:
+      raw.project_id != null
+        ? String(raw.project_id)
+        : undefined,
+
+    task_id:
+      taskId != null
+        ? String(taskId)
+        : undefined,
+
+    url:
+      attachment.attachment_web_url ??
+      attachment.attachment_url ??
+      raw.attachment_web_url ??
+      raw.attachment_url ??
+      undefined,
+
+    created_at:
+      raw.created_at ??
+      raw.last_activity_at ??
+      attachment.created_at ??
+      undefined,
+
+    updated_at:
+      raw.updated_at ??
+      raw.last_activity_at ??
+      undefined,
   };
 };
-
 const perform = async (z, bundle) => {
   const raw = bundle.cleanedRequest || {};
 
-  z.console.log('===== FILE ADDED =====');
-  z.console.log('Raw file payload:', raw);
+  z.console.log('===== FILE ADDED WEBHOOK RECEIVED =====');
+  z.console.log(
+    'Raw file payload:',
+    JSON.stringify(raw)
+  );
 
-  const attachments = (raw.item_json && raw.item_json.attachments) || [];
+  const item = getItemJson(raw);
 
-  // One or more files can arrive in a single event — emit one row per file
-  const shaped = attachments.length > 0
-    ? attachments.map((att) => shapeFile(raw, att))
-    : [shapeFile(raw, {})]; // fallback so we never return an empty array on a malformed event
+  const attachments = Array.isArray(item.attachments)
+    ? item.attachments
+    : [];
 
-  z.console.log('Shaped output:', shaped);
+  let shaped;
+
+  if (attachments.length > 0) {
+    shaped = attachments.map((attachment) =>
+      shapeFile(raw, attachment)
+    );
+  } else {
+    // item_json/attachments may not exist.
+    // Still return the webhook payload as one item.
+    shaped = [shapeFile(raw)];
+  }
+
+  z.console.log(
+    'Shaped output:',
+    JSON.stringify(shaped)
+  );
 
   return shaped;
 };
@@ -95,7 +175,7 @@ const performList = async (z, bundle) => {
     url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers',
     method: 'GET',
     params: {
-      event: 'file_added',
+      event: 'file_added_on_task',
       wsid: bundle.inputData.wsid,
       project_id: bundle.inputData.project_id,
       task_id: bundle.inputData.task_id,
@@ -105,17 +185,27 @@ const performList = async (z, bundle) => {
   response.throwForStatus();
 
   const data = response.data;
-  const list = Array.isArray(data) ? data : data.data || [];
 
-  // Each list item may itself contain multiple attachments — flatten them
+  const list = Array.isArray(data)
+    ? data
+    : data.data || [];
+
   return list.flatMap((raw) => {
-    const attachments = (raw.item_json && raw.item_json.attachments) || [];
-    return attachments.length > 0
-      ? attachments.map((att) => shapeFile(raw, att))
-      : [shapeFile(raw, {})];
+    const item = getItemJson(raw);
+
+    const attachments = Array.isArray(item.attachments)
+      ? item.attachments
+      : [];
+
+    if (attachments.length > 0) {
+      return attachments.map((attachment) =>
+        shapeFile(raw, attachment)
+      );
+    }
+
+    return [shapeFile(raw)];
   });
 };
-
 module.exports = {
   key: 'file_added',
   noun: 'File',

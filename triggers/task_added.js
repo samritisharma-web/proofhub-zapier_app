@@ -73,26 +73,33 @@ const performUnsubscribe = async (z, bundle) => {
 
 
 const shapeTask = (task) => ({
-  id: task.id != null ? String(task.id) : undefined,
+  id: task.id != null
+    ? String(task.id)
+    : (task.task_id != null
+        ? String(task.task_id)
+        : (task.item_id != null ? String(task.item_id) : undefined)),
   name: task.name,
   description: task.description,
   wsid: task.wsid != null ? String(task.wsid) : undefined,
   project_id: task.project_id != null ? String(task.project_id) : undefined,
 });
 
-
 const perform = async (z, bundle) => {
-  return [shapeTask(bundle.cleanedRequest || {})];
+  const raw = bundle.cleanedRequest || {};
+  const taskData = raw.item_json || raw; // fall back to top-level if item_json is null
+  return [shapeTask(taskData)];
 };
 
 
 const performList = async (z, bundle) => {
   const response = await z.request({
-    // your actual URL/config here
-    // url: '...',
-    // method: 'GET',
-    // params: { ... },
-
+    url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/',
+    method: 'GET',
+    params: {
+      event: 'task_added',
+      wsid: bundle.inputData.wsid,
+      project_id: bundle.inputData.project_id,
+    },
     skipThrowForStatus: true,
   });
 
@@ -102,14 +109,12 @@ const performList = async (z, bundle) => {
   handleProofHubError(z, response);
 
   const data = response.data;
-
   const list = Array.isArray(data)
     ? data
     : data.data || data.original || [];
 
   return list.map(shapeTask);
 };
-
 
 module.exports = {
 

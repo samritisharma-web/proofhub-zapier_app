@@ -1,7 +1,6 @@
 'use strict';
-
 const performSubscribe = async (z, bundle) => {
-  z.console.log('===== TASK MOVED TO SECTION SUBSCRIBE CALLED =====');
+  z.console.log('===== SUBSCRIBE CALLED (updated_task) =====');
   z.console.log('INPUT DATA:', bundle.inputData);
   z.console.log('TARGET URL:', bundle.targetUrl);
 
@@ -9,23 +8,18 @@ const performSubscribe = async (z, bundle) => {
     url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe',
     method: 'POST',
     body: {
-      // Confirmed: section moves arrive as "updated_task" with
-      // item_json.move_case === "move_to_section", same as completion
-      // events use item_json.completed. There is no distinct
-      // "moved_to_section" server-side event.
-      event: 'updated_task',
+      event: 'move_to_section',
       wsid: bundle.inputData.wsid,
       project_id: bundle.inputData.project_id,
-      task_id: bundle.inputData.task_id,
+      section_id: bundle.inputData.section_id,
       url: bundle.targetUrl,
     },
   });
 
-  z.console.log('TASK MOVED TO SECTION SUBSCRIBE RESPONSE:', response.data);
+  z.console.log('SUBSCRIBE RESPONSE:', response.data);
   response.throwForStatus();
   return response.data;
 };
-
 const performUnsubscribe = async (z, bundle) => {
   const subscriptionId = bundle.subscribeData.id;
 
@@ -149,13 +143,6 @@ module.exports = {
         required: true,
         dynamic: 'ProjectsList.id.name',
         altersDynamicFields: true,
-      },
-      {
-        key: 'task_id',
-        label: 'Task',
-        type: 'string',
-        required: false,
-        dynamic: 'tasksList.id.name',
       },
       {
         key: 'section_id',

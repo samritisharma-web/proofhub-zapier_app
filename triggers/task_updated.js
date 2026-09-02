@@ -38,14 +38,16 @@ const performUnsubscribe = async (z, bundle) => {
 const shapeTask = (task = {}) => {
   const item = task.item_json || task;
   const rawId = task.item_id != null ? task.item_id : task.id;
+  const rawWsid = task.wsid != null ? task.wsid : task.ws_id;
+  const updatedAt = task.last_activity_at || task.updated_at || Date.now();
 
   return {
-    id: rawId != null ? String(rawId) : undefined,
+    id: rawId != null ? `${rawId}-${updatedAt}` : undefined,  // <-- unique per update
     name: item.name || (rawId != null ? `Task #${rawId}` : undefined),
     description: item.description,
-    wsid: task.wsid != null ? String(task.wsid) : undefined,
+    wsid: rawWsid != null ? String(rawWsid) : undefined,
     project_id: task.project_id != null ? String(task.project_id) : undefined,
-    updated_at: task.last_activity_at || task.updated_at || undefined,
+    updated_at: updatedAt,
   };
 };
 
@@ -105,7 +107,7 @@ const performList = async (z, bundle) => {
     : data.data || data.original || [];
 
   return list.map(shapeTask);
-}; 
+};
 
 module.exports = {
   key: 'updated_task',

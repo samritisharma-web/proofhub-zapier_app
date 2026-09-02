@@ -9,12 +9,9 @@ const performSubscribe = async (z, bundle) => {
     url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe',
     method: 'POST',
     body: {
-      // ProofHub has no distinct "task_completed" webhook event —
-      // completion is signaled via updated_task with item_json.completed === true
-      event: 'updated_task',
+      event: 'completed_task',
       wsid: bundle.inputData.wsid,
       project_id: bundle.inputData.project_id,
-      task_id: bundle.inputData.task_id,
       url: bundle.targetUrl,
     },
   });
@@ -39,43 +36,88 @@ const performUnsubscribe = async (z, bundle) => {
 };
 
 // Matches the real payload: { item_id, item_json: { completed, name?, description? }, ... }
+const getItem = (raw) => {
+  return raw.item_json && typeof raw.item_json === 'object'
+    ? raw.item_json
+    : {};
+};
+
 const shapeTask = (raw = {}) => {
-  const item = raw.item_json || {};
-  const rawId = raw.item_id != null ? raw.item_id : raw.id;
+  const item = getItem(raw);
+
+  const rawId =
+    raw.item_id ??
+    raw.task_id ??
+    raw.id ??
+    item.id;
+
+  const completed =
+    item.completed === true ||
+    item.completed === 1 ||
+    item.completed === '1' ||
+    item.completed === 'true' ||
+    raw.completed === true ||
+    raw.completed === 1 ||
+    raw.completed === '1' ||
+    raw.completed === 'true';
 
   return {
     id: rawId != null ? String(rawId) : undefined,
+
     task_id: rawId != null ? String(rawId) : undefined,
-    name: item.name || (rawId != null ? `Task #${rawId}` : undefined),
-    description: item.description || undefined,
 
-    wsid: raw.wsid != null ? String(raw.wsid) : undefined,
-    project_id: raw.project_id != null ? String(raw.project_id) : undefined,
+    name:
+      item.name ??
+      raw.name ??
+      (rawId != null ? `Task #${rawId}` : undefined),
 
-    status: item.completed === true ? 'completed' : undefined,
-    completed_at: item.completed === true ? (raw.last_activity_at || undefined) : undefined,
-    updated_at: raw.last_activity_at || raw.updated_at || undefined,
+    description:
+      item.description ??
+      raw.description ??
+      undefined,
+
+    wsid:
+      raw.wsid != null
+        ? String(raw.wsid)
+        : undefined,
+
+    project_id:
+      raw.project_id != null
+        ? String(raw.project_id)
+        : undefined,
+
+    status:
+      completed
+        ? 'completed'
+        : raw.status ?? item.status ?? undefined,
+
+    completed_at:
+      raw.completed_at ??
+      item.completed_at ??
+      (completed ? raw.last_activity_at : undefined),
+
+    updated_at:
+      raw.last_activity_at ??
+      raw.updated_at ??
+      item.updated_at ??
+      undefined,
   };
 };
 
 const perform = async (z, bundle) => {
   const raw = bundle.cleanedRequest || {};
 
-  z.console.log('===== TASK UPDATE RECEIVED (checking for completion) =====');
-  z.console.log('Raw payload:', raw);
-
-  const item = raw.item_json || {};
-
-  // This subscription receives ALL task updates, not just completions —
-  // only emit a result when the update actually marks the task complete.
-  if (item.completed !== true) {
-    z.console.log('Not a completion event — skipping (completed !== true)');
-    return [];
-  }
+  z.console.log(
+    '===== WEBHOOK RECEIVED =====',
+    JSON.stringify(raw)
+  );
 
   const shaped = shapeTask(raw);
 
-  z.console.log('Shaped output:', shaped);
+  z.console.log(
+    '===== SHAPED DATA =====',
+    JSON.stringify(shaped)
+  );
 
   return [shaped];
 };
@@ -85,8 +127,7 @@ const performList = async (z, bundle) => {
     url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers',
     method: 'GET',
     params: {
-      // Match performSubscribe — 'task_completed' isn't a real server-side event
-      event: 'updated_task',
+      event: 'completed_task',
       wsid: bundle.inputData.wsid,
       project_id: bundle.inputData.project_id,
       task_id: bundle.inputData.task_id,
