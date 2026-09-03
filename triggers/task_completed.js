@@ -1,13 +1,26 @@
 'use strict';
 
+const PROOFHUB_BASE_URL =
+  'https://app.indev2.proofhub.com/oauth/ss_zapier/public';
+
+/**
+ * Subscribe Zapier to ProofHub completed-task webhook.
+ */
 const performSubscribe = async (z, bundle) => {
   z.console.log('===== TASK COMPLETED SUBSCRIBE CALLED =====');
-  z.console.log('INPUT DATA:', bundle.inputData);
-  z.console.log('TARGET URL:', bundle.targetUrl);
+  z.console.log(
+    'INPUT DATA:',
+    JSON.stringify(bundle.inputData)
+  );
+  z.console.log(
+    'TARGET URL:',
+    bundle.targetUrl
+  );
 
   const response = await z.request({
-    url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe',
+    url: `${PROOFHUB_BASE_URL}/zapier/triggers/subscribe`,
     method: 'POST',
+
     body: {
       event: 'completed_task',
       wsid: bundle.inputData.wsid,
@@ -16,32 +29,107 @@ const performSubscribe = async (z, bundle) => {
     },
   });
 
-  z.console.log('TASK COMPLETED SUBSCRIBE RESPONSE:', response.data);
+  z.console.log(
+    'TASK COMPLETED SUBSCRIBE STATUS:',
+    response.status
+  );
+
+  z.console.log(
+    'TASK COMPLETED SUBSCRIBE RESPONSE:',
+    JSON.stringify(response.data)
+  );
+
   response.throwForStatus();
+
   return response.data;
 };
 
-const performUnsubscribe = async (z, bundle) => {
-  const subscriptionId = bundle.subscribeData.id;
 
-  z.console.log('===== TASK COMPLETED UNSUBSCRIBE =====', subscriptionId);
+/**
+ * Unsubscribe Zapier webhook from ProofHub.
+ */
+const performUnsubscribe = async (z, bundle) => {
+  const subscriptionId =
+    bundle.subscribeData &&
+    bundle.subscribeData.id;
+
+  z.console.log(
+    '===== TASK COMPLETED UNSUBSCRIBE =====',
+    subscriptionId
+  );
+
+  if (!subscriptionId) {
+    z.console.log(
+      'No subscription ID found. Nothing to unsubscribe.'
+    );
+
+    return {};
+  }
 
   const response = await z.request({
-    url: `https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers/subscribe/${subscriptionId}`,
+    url: `${PROOFHUB_BASE_URL}/zapier/triggers/subscribe/${subscriptionId}`,
     method: 'DELETE',
   });
 
+  z.console.log(
+    'UNSUBSCRIBE STATUS:',
+    response.status
+  );
+
   response.throwForStatus();
+
   return response.data;
 };
 
-// Matches the real payload: { item_id, item_json: { completed, name?, description? }, ... }
-const getItem = (raw) => {
-  return raw.item_json && typeof raw.item_json === 'object'
+
+/**
+ * Get item_json safely.
+ *
+ * ProofHub webhook can look like:
+ *
+ * {
+ *   item_id: 123,
+ *   item_json: {
+ *     name: "...",
+ *     description: "...",
+ *     completed: true
+ *   }
+ * }
+ */
+const getItem = (raw = {}) => {
+  return raw.item_json &&
+    typeof raw.item_json === 'object'
     ? raw.item_json
     : {};
 };
 
+
+/**
+ * Check whether task is completed.
+ */
+const isCompleted = (raw = {}) => {
+  const item = getItem(raw);
+
+  return (
+    item.completed === true ||
+    item.completed === 1 ||
+    item.completed === '1' ||
+    item.completed === 'true' ||
+
+    raw.completed === true ||
+    raw.completed === 1 ||
+    raw.completed === '1' ||
+    raw.completed === 'true'
+  );
+};
+
+
+/**
+ * Convert ProofHub response into Zapier task structure.
+ *
+ * Everything here is dynamic.
+ * Nothing is hardcoded.
+ */
 const shapeTask = (raw = {}) => {
   const item = getItem(raw);
 
@@ -51,25 +139,25 @@ const shapeTask = (raw = {}) => {
     raw.id ??
     item.id;
 
-  const completed =
-    item.completed === true ||
-    item.completed === 1 ||
-    item.completed === '1' ||
-    item.completed === 'true' ||
-    raw.completed === true ||
-    raw.completed === 1 ||
-    raw.completed === '1' ||
-    raw.completed === 'true';
+  const completed = isCompleted(raw);
 
-  return {
-    id: rawId != null ? String(rawId) : undefined,
+  const task = {
+    id:
+      rawId != null
+        ? String(rawId)
+        : undefined,
 
-    task_id: rawId != null ? String(rawId) : undefined,
+    task_id:
+      rawId != null
+        ? String(rawId)
+        : undefined,
 
     name:
       item.name ??
+      item.title ??
       raw.name ??
-      (rawId != null ? `Task #${rawId}` : undefined),
+      raw.title ??
+      undefined,
 
     description:
       item.description ??
@@ -89,12 +177,20 @@ const shapeTask = (raw = {}) => {
     status:
       completed
         ? 'completed'
-        : raw.status ?? item.status ?? undefined,
+        : (
+            raw.status ??
+            item.status ??
+            undefined
+          ),
 
     completed_at:
       raw.completed_at ??
       item.completed_at ??
-      (completed ? raw.last_activity_at : undefined),
+      (
+        completed
+          ? raw.last_activity_at
+          : undefined
+      ),
 
     updated_at:
       raw.last_activity_at ??
@@ -102,56 +198,172 @@ const shapeTask = (raw = {}) => {
       item.updated_at ??
       undefined,
   };
+
+  return task;
 };
 
+
+/**
+ * REAL WEBHOOK HANDLER
+ *
+ * This is called when ProofHub actually sends:
+ *
+ * ProofHub
+ *    ↓
+ * Zapier webhook
+ *    ↓
+ * bundle.cleanedRequest
+ *    ↓
+ * perform()
+ */
 const perform = async (z, bundle) => {
   const raw = bundle.cleanedRequest || {};
 
   z.console.log(
-    '===== WEBHOOK RECEIVED =====',
+    '===== TASK COMPLETED WEBHOOK RECEIVED ====='
+  );
+
+  z.console.log(
+    'RAW WEBHOOK DATA:',
     JSON.stringify(raw)
   );
 
   const shaped = shapeTask(raw);
 
   z.console.log(
-    '===== SHAPED DATA =====',
+    'SHAPED TASK DATA:',
     JSON.stringify(shaped)
   );
 
   return [shaped];
 };
 
+
+/**
+ * TEST / POLLING DATA
+ *
+ * Zapier uses this when you click:
+ *
+ * Test Trigger
+ *
+ * It calls ProofHub and gets actual completed tasks.
+ */
 const performList = async (z, bundle) => {
+  z.console.log(
+    '===== TASK COMPLETED PERFORM LIST CALLED ====='
+  );
+
+  z.console.log(
+    'INPUT DATA:',
+    JSON.stringify(bundle.inputData)
+  );
+
+  const params = {
+    event: 'completed_task',
+  };
+
+  /**
+   * Only send wsid when selected.
+   */
+  if (bundle.inputData.wsid) {
+    params.wsid = bundle.inputData.wsid;
+  }
+
+  /**
+   * Only send project_id when selected.
+   */
+  if (bundle.inputData.project_id) {
+    params.project_id =
+      bundle.inputData.project_id;
+  }
+
+  z.console.log(
+    'REQUEST PARAMS:',
+    JSON.stringify(params)
+  );
+
   const response = await z.request({
-    url: 'https://app.indev2.proofhub.com/oauth/ss_zapier/public/zapier/triggers',
+    url: `${PROOFHUB_BASE_URL}/zapier/triggers`,
     method: 'GET',
-    params: {
-      event: 'completed_task',
-      wsid: bundle.inputData.wsid,
-      project_id: bundle.inputData.project_id,
-      task_id: bundle.inputData.task_id,
-    },
+    params,
   });
+
+  z.console.log(
+    'PERFORM LIST STATUS:',
+    response.status
+  );
 
   response.throwForStatus();
 
   const data = response.data;
-  const list = Array.isArray(data) ? data : data.data || [];
 
-  // Filter the same way perform() does — only completed tasks
-  return list
-    .filter((raw) => (raw.item_json || {}).completed === true)
+  z.console.log(
+    '===== RAW PROOFHUB TEST RESPONSE =====',
+    JSON.stringify(data)
+  );
+
+  /**
+   * Handle both possible response formats:
+   *
+   * 1. [
+   *      {...},
+   *      {...}
+   *    ]
+   *
+   * 2. {
+   *      data: [
+   *        {...},
+   *        {...}
+   *      ]
+   *    }
+   */
+  let list = [];
+
+  if (Array.isArray(data)) {
+    list = data;
+  } else if (
+    data &&
+    Array.isArray(data.data)
+  ) {
+    list = data.data;
+  } else if (
+    data &&
+    Array.isArray(data.original)
+  ) {
+    list = data.original;
+  }
+
+  z.console.log(
+    'NORMALIZED PROOFHUB RECORDS:',
+    JSON.stringify(list)
+  );
+
+  /**
+   * Keep only completed tasks.
+   */
+  const completedTasks = list
+    .filter(isCompleted)
     .map(shapeTask);
+
+  z.console.log(
+    '===== COMPLETED TASKS FOR ZAPIER TEST =====',
+    JSON.stringify(completedTasks)
+  );
+
+  return completedTasks;
 };
+
 
 module.exports = {
   key: 'task_completed',
+
   noun: 'Task',
 
   display: {
     label: 'Task Completed',
-    description: 'Triggers instantly when a task is completed in ProofHub.',
+
+    description:
+      'Triggers instantly when a task is completed in ProofHub.',
   },
 
   operation: {
@@ -160,48 +372,104 @@ module.exports = {
     inputFields: [
       {
         key: 'wsid',
+
         label: 'Workspace',
+
         type: 'string',
+
         required: true,
+
         dynamic: 'workspacesList.id.name',
+
         altersDynamicFields: true,
       },
+
       {
         key: 'project_id',
+
         label: 'Project',
+
         type: 'string',
+
         required: true,
+
         dynamic: 'ProjectsList.id.name',
+
         altersDynamicFields: true,
       },
     ],
 
     performSubscribe,
+
     performUnsubscribe,
+
     perform,
+
     performList,
 
-    sample: {
-      id: '111596',
-      task_id: '111596',
-      name: 'Sample Task',
-      description: 'Sample description',
-      wsid: '4598',
-      project_id: '36290',
-      status: 'completed',
-      completed_at: '2026-08-26T12:02:32.701132Z',
-      updated_at: '2026-08-26T12:02:32.701132Z',
-    },
+    /**
+     * IMPORTANT:
+     *
+     * No hardcoded sample object here.
+     *
+     * Zapier Test Trigger should get its
+     * records from performList().
+     */
 
     outputFields: [
-      { key: 'id', label: 'Task ID', type: 'string' },
-      { key: 'task_id', label: 'Task ID', type: 'string' },
-      { key: 'name', label: 'Task Name', type: 'string' },
-      { key: 'description', label: 'Description', type: 'string' },
-      { key: 'wsid', label: 'Workspace ID', type: 'string' },
-      { key: 'project_id', label: 'Project ID', type: 'string' },
-      { key: 'status', label: 'Status', type: 'string' },
-      { key: 'completed_at', label: 'Completed At', type: 'string' },
+      {
+        key: 'id',
+        label: 'Task ID',
+        type: 'string',
+      },
+
+      {
+        key: 'task_id',
+        label: 'Task ID',
+        type: 'string',
+      },
+
+      {
+        key: 'name',
+        label: 'Task Name',
+        type: 'string',
+      },
+
+      {
+        key: 'description',
+        label: 'Description',
+        type: 'string',
+      },
+
+      {
+        key: 'wsid',
+        label: 'Workspace ID',
+        type: 'string',
+      },
+
+      {
+        key: 'project_id',
+        label: 'Project ID',
+        type: 'string',
+      },
+
+      {
+        key: 'status',
+        label: 'Status',
+        type: 'string',
+      },
+
+      {
+        key: 'completed_at',
+        label: 'Completed At',
+        type: 'string',
+      },
+
+      {
+        key: 'updated_at',
+        label: 'Updated At',
+        type: 'string',
+      },
     ],
   },
 };

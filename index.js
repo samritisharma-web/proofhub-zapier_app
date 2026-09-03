@@ -1,7 +1,5 @@
 const { authentication, includeBearerToken } = require('./authentication');
 const { afters = [] } = require('./middleware');
-// const testConnection = require('./triggers/test_connection');
-// const newTask = require('./triggers/task');
 const createTask = require('./creates/create_task');
 const updateTask = require('./creates/update_task');
 const createSubstask = require('./creates/create_subtask');
@@ -24,7 +22,6 @@ const fileAdded = require('./triggers/file_added');
 const commentAddedTrigger = require('./triggers/comment_on_task');
 const taskMovedToSection = require('./triggers/task_moved_to_section');
 const tagAddedToTask = require('./triggers/tag_added_to_task');
-
 
 module.exports = {
   version: require('./package.json').version,

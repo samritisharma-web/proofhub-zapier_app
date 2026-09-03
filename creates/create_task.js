@@ -39,10 +39,19 @@ const perform = async (z, bundle) => {
     );
   }
 
+  // NEW: guard against a 2xx response with no/empty body
+  if (!response.data || typeof response.data !== 'object') {
+    throw new z.errors.Error(
+      'ProofHub returned an empty or invalid response body.',
+      'InvalidResponseError',
+      response.status
+    );
+  }
+
   return {
     id: `pending-${Date.now()}`,
-    status: response.data.status,
-    message: response.data.message,
+    status: response.data.status ?? 'unknown',
+    message: response.data.message ?? '',
     title: bundle.inputData.title,
     description: bundle.inputData.description,
   };
