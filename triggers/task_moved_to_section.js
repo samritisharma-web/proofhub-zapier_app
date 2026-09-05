@@ -1,6 +1,7 @@
 'use strict';
+
 const performSubscribe = async (z, bundle) => {
-  z.console.log('===== SUBSCRIBE CALLED (updated_task) =====');
+  z.console.log('===== SUBSCRIBE CALLED (move_to_section) =====');
   z.console.log('INPUT DATA:', bundle.inputData);
   z.console.log('TARGET URL:', bundle.targetUrl);
 
@@ -20,6 +21,7 @@ const performSubscribe = async (z, bundle) => {
   response.throwForStatus();
   return response.data;
 };
+
 const performUnsubscribe = async (z, bundle) => {
   const subscriptionId = bundle.subscribeData.id;
 
@@ -34,55 +36,64 @@ const performUnsubscribe = async (z, bundle) => {
   return response.data;
 };
 
-// Matches the CONFIRMED real payload:
-// item_json: { move_case: "move_to_section", user: {...}, section: { id, name }, project: {...} }
 const shapeTask = (raw = {}) => {
-  const item = raw.item_json || {};
-  const rawId = raw.item_id != null ? raw.item_id : raw.id;
-
-  const section = item.section || {};
-  const user = item.user || {};
-  const project = item.project || {};
+  const section = raw.section || {};
+  const project = raw.project || {};
 
   return {
-    id: rawId != null ? String(rawId) : undefined,
-    task_id: rawId != null ? String(rawId) : undefined,
+    ...raw,
 
-    wsid: raw.wsid != null ? String(raw.wsid) : undefined,
-    project_id: (project.id != null ? project.id : raw.project_id) != null
-      ? String(project.id != null ? project.id : raw.project_id)
-      : undefined,
-    project_name: project.name || undefined,
+    id:
+      raw.id != null
+        ? String(raw.id)
+        : undefined,
 
-    section_id: section.id != null ? String(section.id) : undefined,
-    section_name: section.name || undefined,
+    task_id:
+      raw.task_id != null
+        ? String(raw.task_id)
+        : undefined,
 
-    moved_by_user_id: user.id != null ? String(user.id) : undefined,
-    moved_by_name: [user.first_name, user.last_name].filter(Boolean).join(' ') || undefined,
-    moved_by_email: user.email || undefined,
+    // Keep both workspace_id and wsid
+    workspace_id:
+      raw.workspace_id != null
+        ? String(raw.workspace_id)
+        : undefined,
 
-    updated_at: raw.last_activity_at || raw.updated_at || undefined,
+    wsid:
+      raw.workspace_id != null
+        ? String(raw.workspace_id)
+        : undefined,
+
+    project_id:
+      project.id != null
+        ? String(project.id)
+        : undefined,
+
+    project_name:
+      project.name || undefined,
+
+    section_id:
+      section.id != null
+        ? String(section.id)
+        : undefined,
+
+    section_name:
+      section.name || undefined,
+
+    updated_at:
+      raw.updated_at || undefined,
   };
 };
 
 const perform = async (z, bundle) => {
   const raw = bundle.cleanedRequest || {};
 
-  z.console.log('===== TASK UPDATE RECEIVED (checking for section move) =====');
-  z.console.log('Raw payload:', raw);
-
-  const item = raw.item_json || {};
-
-  // The real signal for a section move is move_case === "move_to_section",
-  // not a flat section_id field.
-  if (item.move_case !== 'move_to_section') {
-    z.console.log(`Not a section-move event (move_case: ${item.move_case}) — skipping`);
-    return [];
-  }
+  z.console.log('===== TASK MOVED TO SECTION WEBHOOK RECEIVED =====');
+  z.console.log('RAW PAYLOAD:', JSON.stringify(raw));
 
   const shaped = shapeTask(raw);
 
-  z.console.log('Shaped output:', shaped);
+  z.console.log('SHAPED OUTPUT:', JSON.stringify(shaped));
 
   return [shaped];
 };
@@ -90,20 +101,12 @@ const perform = async (z, bundle) => {
 const performList = async (z, bundle) => {
   z.console.log('===== TASK MOVED TO SECTION - performList (no live list endpoint, using sample) =====');
 
-  // The ProofHub endpoint /zapier/triggers returned 404 ("File not found")
-  // on indev2 — it isn't implemented server-side. Returning static sample
-  // data here so "Test Trigger" works in the Zap editor without erroring.
-  // Live events still flow correctly through the real webhook (perform above).
   return [
     {
       id: '111591',
       task_id: '111591',
-      wsid: bundle.inputData.wsid
-        ? String(bundle.inputData.wsid)
-        : '4598',
-      project_id: bundle.inputData.project_id
-        ? String(bundle.inputData.project_id)
-        : '36290',
+      wsid: bundle.inputData.wsid ? String(bundle.inputData.wsid) : '4598',
+      project_id: bundle.inputData.project_id ? String(bundle.inputData.project_id) : '36290',
       project_name: "Sam's project ws1",
       section_id: '87132',
       section_name: 'new section',
@@ -171,19 +174,5 @@ module.exports = {
       moved_by_email: 'samriti.sharma@sdplabs.com',
       updated_at: '2026-08-26T12:35:32.529513Z',
     },
-
-    outputFields: [
-      { key: 'id', label: 'Task ID', type: 'string' },
-      { key: 'task_id', label: 'Task ID', type: 'string' },
-      { key: 'wsid', label: 'Workspace ID', type: 'string' },
-      { key: 'project_id', label: 'Project ID', type: 'string' },
-      { key: 'project_name', label: 'Project Name', type: 'string' },
-      { key: 'section_id', label: 'Section ID', type: 'string' },
-      { key: 'section_name', label: 'Section Name', type: 'string' },
-      { key: 'moved_by_user_id', label: 'Moved By (User ID)', type: 'string' },
-      { key: 'moved_by_name', label: 'Moved By (Name)', type: 'string' },
-      { key: 'moved_by_email', label: 'Moved By (Email)', type: 'string' },
-      { key: 'updated_at', label: 'Updated At', type: 'string' },
-    ],
   },
 };

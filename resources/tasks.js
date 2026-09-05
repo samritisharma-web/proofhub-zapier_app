@@ -8,12 +8,18 @@ const listTasks = async (z, bundle) => {
       type: 'tasks',
       wsid: bundle.inputData.wsid,
       project_id: bundle.inputData.project_id,
+      id: bundle.inputData.task_id,
       task_id: bundle.inputData.task_id,
     },
   });
 
   return response.data.original.map((task) => ({
+    // Zapier internal ID
     id: String(task.id),
+
+    // Field that user sees/uses in Zapier
+    task_id: String(task.task_id),
+
     name: task.name,
   }));
 };
@@ -34,6 +40,7 @@ module.exports = {
 
       sample: {
         id: '725',
+        task_id: '725',
         name: 'new task to test zap trigger15',
       },
     },

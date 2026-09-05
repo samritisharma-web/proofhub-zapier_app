@@ -34,29 +34,25 @@ const performUnsubscribe = async (z, bundle) => {
   return response.data;
 };
 
-// Matches the real payload:
-// { item_id, item_json (often null), wsid, project_id, action_by, last_activity_at }
 const shapeComment = (raw = {}) => {
   const item = raw.item_json || {};
 
   const rawId = raw.item_id != null ? raw.item_id : raw.id;
 
   return {
+    ...raw,
+    ...item,
+
     id: rawId != null ? String(rawId) : undefined,
     comment_id: rawId != null ? String(rawId) : undefined,
-
-    // item_json is frequently null in this event — comment text may not
-    // actually be delivered by this webhook. Falls back to a placeholder
-    // so downstream Gmail steps don't send a blank/undefined body.
-    comment: item.comment || item.content || item.text || '(no comment text provided by ProofHub)',
+    comment:
+      item.comment || item.content || item.text || '(no comment text provided by ProofHub)',
 
     wsid: raw.wsid != null ? String(raw.wsid) : undefined,
     project_id: raw.project_id != null ? String(raw.project_id) : undefined,
 
-    // Not present in the payload at all — left undefined unless ProofHub adds it later
     task_id: raw.task_id != null ? String(raw.task_id) : undefined,
 
-    // action_by is the user who commented — payload has no separate "user_id"
     user_id: raw.action_by != null ? String(raw.action_by) : undefined,
 
     created_at: raw.last_activity_at || raw.created_at || undefined,
@@ -147,18 +143,8 @@ module.exports = {
       project_id: '36290',
       task_id: '101416',
       user_id: '3725',
+      action_by: '3725',
       created_at: '2026-08-26T10:40:00.391329Z',
     },
-
-    outputFields: [
-      { key: 'id', label: 'Comment ID', type: 'string' },
-      { key: 'comment_id', label: 'Comment ID', type: 'string' },
-      { key: 'comment', label: 'Comment', type: 'string' },
-      { key: 'wsid', label: 'Workspace ID', type: 'string' },
-      { key: 'project_id', label: 'Project ID', type: 'string' },
-      { key: 'task_id', label: 'Task ID', type: 'string' },
-      { key: 'user_id', label: 'User ID', type: 'string' },
-      { key: 'created_at', label: 'Created At', type: 'string' },
-    ],
   },
 };

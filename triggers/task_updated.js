@@ -36,15 +36,21 @@ const performUnsubscribe = async (z, bundle) => {
 };
 
 const shapeTask = (task = {}) => {
-  const item = task.item_json || task;
+  const item = task.item_json && typeof task.item_json === 'object' ? task.item_json : {};
+
   const rawId = task.item_id != null ? task.item_id : task.id;
   const rawWsid = task.wsid != null ? task.wsid : task.ws_id;
   const updatedAt = task.last_activity_at || task.updated_at || Date.now();
 
   return {
-    id: rawId != null ? `${rawId}-${updatedAt}` : undefined,  // <-- unique per update
+    ...task,
+    ...item,
+
+
+    id: rawId != null ? `${rawId}-${updatedAt}` : undefined,
+    task_id: rawId != null ? String(rawId) : undefined,
     name: item.name || (rawId != null ? `Task #${rawId}` : undefined),
-    description: item.description,
+    description: item.description ?? task.description ?? undefined,
     wsid: rawWsid != null ? String(rawWsid) : undefined,
     project_id: task.project_id != null ? String(task.project_id) : undefined,
     updated_at: updatedAt,
@@ -87,10 +93,7 @@ const performList = async (z, bundle) => {
       response.data?.message ||
       'Validation failed.';
 
-    throw new z.errors.Error(
-      message,
-      'InvalidRequest'
-    );
+    throw new z.errors.Error(message, 'InvalidRequest');
   }
 
   if (response.status < 200 || response.status >= 300) {
@@ -101,10 +104,7 @@ const performList = async (z, bundle) => {
   }
 
   const data = response.data;
-
-  const list = Array.isArray(data)
-    ? data
-    : data.data || data.original || [];
+  const list = Array.isArray(data) ? data : data.data || data.original || [];
 
   return list.map(shapeTask);
 };
@@ -162,21 +162,13 @@ module.exports = {
     performList,
 
     sample: {
-      id: '111988',
+      id: '111988-2026-08-26T09:34:57.640589Z',
+      task_id: '111988',
       name: 'Task #111988',
       description: 'Sample description',
       wsid: '4598',
       project_id: '36290',
       updated_at: '2026-08-26T09:34:57.640589Z',
     },
-
-    outputFields: [
-      { key: 'id', label: 'Task ID', type: 'string' },
-      { key: 'name', label: 'Task Name', type: 'string' },
-      { key: 'description', label: 'Description', type: 'string' },
-      { key: 'wsid', label: 'Workspace ID', type: 'string' },
-      { key: 'project_id', label: 'Project ID', type: 'string' },
-      { key: 'updated_at', label: 'Updated At', type: 'datetime' },
-    ],
   },
 };
