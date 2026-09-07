@@ -9,7 +9,7 @@ const ME_URL = `${BASE_URL}/zapier/me`;
 
 const getAccessToken = async (z, bundle) => {
   z.console.log('Inside getAccessToken');
-  z.console.log(bundle.inputData);
+  z.console.log('Authorization code received');
 
   const response = await z.request({
     url: TOKEN_URL,
@@ -18,8 +18,8 @@ const getAccessToken = async (z, bundle) => {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: {
-      client_id: bundle.inputData.client_id,
-      client_secret: bundle.inputData.client_secret,
+      client_id: bundle.environment.CLIENT_ID,
+      client_secret: bundle.environment.CLIENT_SECRET,
       grant_type: 'authorization_code',
       code: bundle.inputData.code,
       redirect_uri: bundle.inputData.redirect_uri,
@@ -27,11 +27,14 @@ const getAccessToken = async (z, bundle) => {
     },
   });
 
+  z.console.log('TOKEN RESPONSE STATUS:', response.status);
+  z.console.log('TOKEN RESPONSE DATA:', response.data);
+
   if (response.status !== 200) {
     throw new z.errors.Error(
       response.data?.error_description ||
-      response.data?.error ||
-      'Authentication failed',
+        response.data?.error ||
+        'Authentication failed',
       response.data?.error || 'AuthError',
       response.status
     );
@@ -45,6 +48,8 @@ const getAccessToken = async (z, bundle) => {
 };
 
 const refreshAccessToken = async (z, bundle) => {
+  z.console.log('Refreshing ProofHub access token');
+
   const response = await z.request({
     url: TOKEN_URL,
     method: 'POST',
@@ -59,28 +64,37 @@ const refreshAccessToken = async (z, bundle) => {
     },
   });
 
+  z.console.log('REFRESH STATUS:', response.status);
+
   if (response.status !== 200) {
-    throw new z.errors.RefreshAuthError();
+    throw new z.errors.RefreshAuthError(
+      'Unable to refresh ProofHub access token'
+    );
   }
 
   return {
     access_token: response.data.access_token,
-    refresh_token: response.data.refresh_token,
+    refresh_token:
+      response.data.refresh_token || bundle.authData.refresh_token,
     expires_in: response.data.expires_in,
   };
 };
 
 const test = async (z, bundle) => {
-  z.console.log('Calling ME endpoint...');
-  z.console.log(bundle.authData);
+  z.console.log('Calling ProofHub ME endpoint');
 
   const response = await z.request({
     url: ME_URL,
     method: 'GET',
   });
-  z.console.log(response.status);
+
+  z.console.log('ME STATUS:', response.status);
+  z.console.log('ME RESPONSE:', response.data);
+
   if (response.status !== 200) {
-    throw new z.errors.RefreshAuthError();
+    throw new z.errors.RefreshAuthError(
+      'ProofHub authentication failed'
+    );
   }
 
   return response.data;
@@ -89,7 +103,9 @@ const test = async (z, bundle) => {
 const includeBearerToken = (request, z, bundle) => {
   if (bundle.authData?.access_token) {
     request.headers = request.headers || {};
-    request.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+
+    request.headers.Authorization =
+      `Bearer ${bundle.authData.access_token}`;
   }
 
   return request;
@@ -108,12 +124,11 @@ const authentication = {
     },
 
     getAccessToken,
+
     refreshAccessToken,
 
     autoRefresh: true,
 
-    // Zapier generates PKCE automatically.
-    // ProofHub validates the PKCE verifier during token exchange.
     enablePkce: true,
   },
 

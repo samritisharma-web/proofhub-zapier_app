@@ -27,7 +27,7 @@ describe('OAuth2 Authentication', () => {
       const bundle = {
         inputData: {
           state: '4444',
-          redirect_uri: REDIRECT_URI,
+          redirect_uri: '{{bundle.inputData.redirect_uri}}',
         },
         environment: {
           CLIENT_ID,
@@ -42,7 +42,7 @@ describe('OAuth2 Authentication', () => {
 
       expect(authorizeUrl).toBe(
         `https://app.indev2.proofhub.com/oauth/ss_zapier/public/oauth/zapier/connect-to-zapier?redirect_uri=${encodeURIComponent(
-          REDIRECT_URI
+            redirect_uri: '{{bundle.inputData.redirect_uri}}', 
         )}&state=4444`
       );
     });
@@ -58,7 +58,7 @@ describe('OAuth2 Authentication', () => {
       const bundle = {
         inputData: {
           code: process.env.TEST_AUTH_CODE,
-          redirect_uri: REDIRECT_URI,
+            redirect_uri: '{{bundle.inputData.redirect_uri}}', 
           code_verifier: process.env.TEST_CODE_VERIFIER,
         },
         environment: {
